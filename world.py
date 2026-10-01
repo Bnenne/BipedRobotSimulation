@@ -5,7 +5,7 @@ import random as rd
 import mujoco.viewer
 
 class WorldEnv(gym.Env):
-    def __init__(self, XML: bytes):
+    def __init__(self, XML: bytes, max_steps: int):
         super().__init__()
 
         self.model = mujoco.MjModel.from_xml_string(XML)
@@ -39,7 +39,7 @@ class WorldEnv(gym.Env):
             "target",
         )
 
-        self.max_steps = 1000
+        self.max_steps = max_steps
         self.current_step = 0
 
         self.viewer = mujoco.viewer.launch_passive(self.model, self.data)
@@ -82,7 +82,6 @@ class WorldEnv(gym.Env):
         return distance <= 0.1 and velocity <= 0.1
 
     def step(self, action):
-        self.current_step += 1
 
         self.viewer.cam.lookat[:] = self.data.xpos[self.agent_id]
 
@@ -99,13 +98,18 @@ class WorldEnv(gym.Env):
         reward = distance - self._get_distance()
         reward += 5 if self._at_target() else 0
 
-        terminated = self.current_step == self.max_steps
+        terminated = self.current_step >= self.max_steps
 
         observation = self._get_obs()
 
         self.viewer.sync()
 
+        self.current_step += 1
+
         return observation, reward, terminated
 
     def get_viewer(self):
         return self.viewer
+
+    def get_step(self):
+        return self.current_step
