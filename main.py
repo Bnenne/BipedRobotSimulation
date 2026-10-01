@@ -15,7 +15,6 @@ env = WorldEnv(XML, max_steps)
 with tqdm(total=epochs, desc="Training") as pbar:
     with env.get_viewer() as viewer:
         while viewer.is_running():
-
             obs = env.reset()
             done = False
 
