@@ -44,8 +44,8 @@ class WorldEnv(gym.Env):
 
         self.viewer = mujoco.viewer.launch_passive(self.model, self.data)
 
-        self.viewer.cam.distance = 5
-        self.viewer.cam.azimuth = 90
+        self.viewer.cam.distance = 20
+        self.viewer.cam.azimuth = 45
         self.viewer.cam.elevation = -30
 
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
@@ -83,7 +83,8 @@ class WorldEnv(gym.Env):
 
     def step(self, action):
 
-        self.viewer.cam.lookat[:] = self.data.xpos[self.agent_id]
+        # self.viewer.cam.lookat[:] = self.data.xpos[self.agent_id]
+        self.viewer.cam.lookat[:] = np.zeros(3)
 
         x_command = action[0]
         y_command = action[1]
@@ -93,14 +94,21 @@ class WorldEnv(gym.Env):
 
         distance = self._get_distance()
 
-        mujoco.mj_step(self.model, self.data)
+        mujoco.mj_step(self.model, self.data, 10)
 
         new_distance = self._get_distance()
 
-        reward = distance - new_distance
+        reward = 0
+
+        diff = distance - new_distance
+
+        if diff > 0:
+            reward = diff
+        else:
+            reward = diff * 10
 
         if self._at_target():
-            reward += 5
+            reward += 50
             self._randomize_target()
 
         self.current_step += 1
@@ -124,6 +132,6 @@ class WorldEnv(gym.Env):
         self.model.body_pos[self.target_id] = np.array([
             rd.randint(-5, 5),
             rd.randint(-5, 5),
-            0
+            0.01
         ], dtype=float)
         mujoco.mj_forward(self.model, self.data)  # refresh xpos immediately
