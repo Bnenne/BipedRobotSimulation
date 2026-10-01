@@ -51,26 +51,26 @@ class WorldEnv(gym.Env):
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
         super().reset(seed=seed)
 
-        self.model.body_pos[self.agent_id] = np.array([0, 0, 0.1])
+        self.data.qpos[:] = 0
+        self.data.qvel[:] = 0
 
-        self.model.body_pos[self.target_id] = np.array([
-            rd.randint(-25, 25),
-            rd.randint(-25, 25),
-            0
-        ], dtype=float)
+        self.data.qpos[0] = 0
+        self.data.qpos[1] = 0
+
+        self._randomize_target()
 
         self.current_step = 0
 
         observation = self._get_obs()
 
-        return observation
+        return observation, {}
 
     def _get_obs(self):
         agent_pos = self.data.xpos[self.agent_id][:2]
         agent_vel = self.data.cvel[self.agent_id][3:5]
         target_pos = self.data.xpos[self.target_id][:2]
 
-        return np.array(agent_pos + agent_vel + target_pos)
+        return np.concatenate([agent_pos, agent_vel, target_pos]).astype(np.float32)
 
     def _get_distance(self):
         return np.linalg.norm(self.data.xpos[self.target_id][:2] - self.data.xpos[self.agent_id][:2])
@@ -95,21 +95,35 @@ class WorldEnv(gym.Env):
 
         mujoco.mj_step(self.model, self.data)
 
-        reward = distance - self._get_distance()
-        reward += 5 if self._at_target() else 0
+        new_distance = self._get_distance()
 
-        terminated = self.current_step >= self.max_steps
+        reward = distance - new_distance
+
+        if self._at_target():
+            reward += 5
+            self._randomize_target()
+
+        self.current_step += 1
 
         observation = self._get_obs()
 
         self.viewer.sync()
 
-        self.current_step += 1
+        terminated = False
+        truncated = self.current_step >= self.max_steps
 
-        return observation, reward, terminated
+        return observation, reward, terminated, truncated, {}
 
     def get_viewer(self):
         return self.viewer
 
     def get_step(self):
         return self.current_step
+
+    def _randomize_target(self):
+        self.model.body_pos[self.target_id] = np.array([
+            rd.randint(-5, 5),
+            rd.randint(-5, 5),
+            0
+        ], dtype=float)
+        mujoco.mj_forward(self.model, self.data)  # refresh xpos immediately
