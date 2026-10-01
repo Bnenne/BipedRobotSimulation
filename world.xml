@@ -1,0 +1,21 @@
+<mujoco>
+    <worldbody>
+        <body name="robot" pos="0 0 0.1">
+            <joint name="slide_x" type="slide" axis="1 0 0"/>
+            <joint name="slide_y" type="slide" axis="0 1 0"/>
+
+            <geom type="box" size="0.1 0.1 0.1"/>
+        </body>
+
+        <body name="target" pos="0 0 0">
+            <geom type="sphere" size="0.1" rgba="1 0 0 1" contype="0" conaffinity="0"/>
+        </body>
+
+        <geom type="plane" size="25 25 0.1"/>
+    </worldbody>
+
+    <actuator>
+        <motor name="motor_x" joint="slide_x" ctrlrange="-1 1"/>
+        <motor name="motor_y" joint="slide_y" ctrlrange="-1 1"/>
+    </actuator>
+</mujoco>
